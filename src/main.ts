@@ -1,39 +1,47 @@
-import * as dotenv from 'dotenv';
-dotenv.config();
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from '../src/app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as dotenv from 'dotenv';
+import serverlessExpress from '@vendia/serverless-express';
+import { Callback, Context, Handler } from 'aws-lambda';
 
-console.log('JWT_SECRET:', process.env.JWT_SECRET);
+dotenv.config();
+
+let server: Handler;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
   app.enableCors();
-
-  // Global validatsiya pipe qo'shish
   app.useGlobalPipes(new ValidationPipe());
 
-  // Swagger sozlamalari
+  // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('To‘yxona API')
+    .setTitle("To'yxona API")
     .setDescription(
-      'Toshkent shahridagi to‘yxonalarni onlayn bron qilish tizimi',
+      "Toshkent shahridagi to'yxonalarni onlayn bron qilish tizimi",
     )
     .setVersion('1.0')
-    .addBearerAuth() // JWT autentifikatsiyasi uchun
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document, {
     swaggerOptions: {
-      persistAuthorization: true, // Avtorizatsiyani saqlash
+      persistAuthorization: true,
     },
   });
 
-  await app.listen(process.env.PORT || 3000);
+  await app.init();
+  const expressApp = app.getHttpAdapter().getInstance();
+  return serverlessExpress({ app: expressApp });
 }
-bootstrap().catch((error) => {
-  console.error('Error during application bootstrap:', error);
-  process.exit(1);
-});
+
+export const handler = async (
+  event: any,
+  context: Context,
+  callback: Callback,
+) => {
+  server = server ?? (await bootstrap());
+  return server(event, context, callback);
+};
