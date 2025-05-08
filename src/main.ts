@@ -10,6 +10,10 @@ console.log('JWT_SECRET:', process.env.JWT_SECRET);
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors();
+
+  await app.init();
+
   // Global validatsiya pipe qo'shish
   app.useGlobalPipes(new ValidationPipe());
 
