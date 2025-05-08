@@ -12,8 +12,6 @@ async function bootstrap() {
 
   app.enableCors();
 
-  await app.init();
-
   // Global validatsiya pipe qo'shish
   app.useGlobalPipes(new ValidationPipe());
 
