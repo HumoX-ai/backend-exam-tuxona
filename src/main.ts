@@ -1,47 +1,33 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as dotenv from 'dotenv';
-import serverlessExpress from '@vendia/serverless-express';
-import { Callback, Context, Handler } from 'aws-lambda';
-
 dotenv.config();
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
 
-let server: Handler;
+console.log('JWT_SECRET:', process.env.JWT_SECRET);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+
+  // Global validatsiya pipe qo'shish
   app.useGlobalPipes(new ValidationPipe());
 
-  // Swagger configuration
+  // Swagger sozlamalari
   const config = new DocumentBuilder()
-    .setTitle("To'yxona API")
+    .setTitle('To‘yxona API')
     .setDescription(
-      "Toshkent shahridagi to'yxonalarni onlayn bron qilish tizimi",
+      'Toshkent shahridagi to‘yxonalarni onlayn bron qilish tizimi',
     )
     .setVersion('1.0')
-    .addBearerAuth()
+    .addBearerAuth() // JWT autentifikatsiyasi uchun
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+  SwaggerModule.setup('api', app, document);
 
-  await app.init();
-  const expressApp = app.getHttpAdapter().getInstance();
-  return serverlessExpress({ app: expressApp });
+  await app.listen(process.env.PORT || 3000);
 }
-
-export const handler = async (
-  event: any,
-  context: Context,
-  callback: Callback,
-) => {
-  server = server ?? (await bootstrap());
-  return server(event, context, callback);
-};
+bootstrap().catch((error) => {
+  console.error('Error during application bootstrap:', error);
+  process.exit(1);
+});
