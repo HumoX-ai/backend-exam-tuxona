@@ -5,12 +5,20 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 
-console.log('JWT_SECRET:', process.env.JWT_SECRET);
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Global validatsiya pipe qo'shish
+  // CORS configuration
+  app.enableCors({
+    origin: [
+      'https://your-frontend-domain.com', // Replace with your production frontend URL
+      'http://localhost:3000', // Allow localhost for development (optional)
+    ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true, // Allow cookies or auth headers (if needed)
+  });
+
+  // Global validation pipe qo'shish
   app.useGlobalPipes(new ValidationPipe());
 
   // Swagger sozlamalari
