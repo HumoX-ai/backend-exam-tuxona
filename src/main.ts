@@ -9,31 +9,59 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // CORS configuration
-  app.enableCors({
-    origin: [
-      'https://your-frontend-domain.com', // Replace with your production frontend URL
-      'http://localhost:3000', // Allow localhost for development (optional)
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true, // Allow cookies or auth headers (if needed)
-  });
+  const allowedOrigins = [
+    process.env.FRONTEND_URL, // e.g., https://toyxona.uz
+    process.env.FRONTEND_DEV_URL || 'http://localhost:3000', // Development fallback
+  ].filter(Boolean);
 
-  // Global validation pipe qo'shish
+  console.log('Allowed CORS origins:', allowedOrigins);
+
+  interface CorsOptionsDelegate {
+    origin?: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => void;
+    methods?: string;
+    allowedHeaders?: string;
+    credentials?: boolean;
+  }
+
+  const corsOptions: CorsOptionsDelegate = {
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log(`Blocked CORS request from origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization',
+    credentials: true,
+  };
+
+  app.enableCors(corsOptions);
+
+  // Global validation pipe
   app.useGlobalPipes(new ValidationPipe());
 
-  // Swagger sozlamalari
+  // Swagger setup
   const config = new DocumentBuilder()
     .setTitle('To‘yxona API')
     .setDescription(
       'Toshkent shahridagi to‘yxonalarni onlayn bron qilish tizimi',
     )
     .setVersion('1.0')
-    .addBearerAuth() // JWT autentifikatsiyasi uchun
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT || 3000);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
 }
 bootstrap().catch((error) => {
   console.error('Error during application bootstrap:', error);
