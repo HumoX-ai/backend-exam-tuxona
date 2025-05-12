@@ -9,59 +9,31 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // CORS configuration
-  const allowedOrigins = [
-    process.env.FRONTEND_URL, // e.g., https://toyxona.uz
-    process.env.FRONTEND_DEV_URL || 'http://localhost:5173', // Development fallback
-  ].filter(Boolean);
-
-  console.log('Allowed CORS origins:', allowedOrigins);
-
-  interface CorsOptionsDelegate {
-    origin?: (
-      origin: string | undefined,
-      callback: (error: Error | null, allow?: boolean) => void,
-    ) => void;
-    methods?: string;
-    allowedHeaders?: string;
-    credentials?: boolean;
-  }
-
-  const corsOptions: CorsOptionsDelegate = {
-    origin: (
-      origin: string | undefined,
-      callback: (error: Error | null, allow?: boolean) => void,
-    ) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.log(`Blocked CORS request from origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+  app.enableCors({
+    origin: [
+      'https://your-frontend-domain.com', // Replace with your production frontend URL
+      'http://localhost:5173', // Allow localhost for development (optional)
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type,Authorization',
-    credentials: true,
-  };
+    credentials: true, // Allow cookies or auth headers (if needed)
+  });
 
-  app.enableCors(corsOptions);
-
-  // Global validation pipe
+  // Global validation pipe qo'shish
   app.useGlobalPipes(new ValidationPipe());
 
-  // Swagger setup
+  // Swagger sozlamalari
   const config = new DocumentBuilder()
     .setTitle('To‘yxona API')
     .setDescription(
       'Toshkent shahridagi to‘yxonalarni onlayn bron qilish tizimi',
     )
     .setVersion('1.0')
-    .addBearerAuth()
+    .addBearerAuth() // JWT autentifikatsiyasi uchun
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(process.env.PORT || 3000);
 }
 bootstrap().catch((error) => {
   console.error('Error during application bootstrap:', error);
