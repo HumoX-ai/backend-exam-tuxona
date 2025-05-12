@@ -11,7 +11,7 @@ async function bootstrap() {
   // CORS configuration
   const allowedOrigins = [
     process.env.FRONTEND_URL, // e.g., https://toyxona.uz
-    process.env.FRONTEND_DEV_URL || 'http://localhost:3000', // Development fallback
+    process.env.FRONTEND_DEV_URL || 'http://localhost:5173', // Development fallback
   ].filter(Boolean);
 
   console.log('Allowed CORS origins:', allowedOrigins);
