@@ -5,6 +5,8 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
+  Get,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
@@ -71,6 +73,31 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'Username allaqachon mavjud' })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
+  }
+
+  @Get('profile') // <-- Yangi endpoint
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Token orqali foydalanuvchi ma'lumotlarini olish" })
+  @ApiResponse({
+    status: 200,
+    description: "Foydalanuvchi ma'lumotlari",
+    schema: {
+      example: {
+        id: '1234567890',
+        username: 'ali',
+        role: 'user',
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+        phone: '+998901234567',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Token yaroqsiz yoki mavjud emas' })
+  getProfile(@Req() req) {
+    // req.user AuthGuard tomonidan tokendan olingan payloadni saqlaydi
+    // To'liq user ma'lumotlarini olish uchun UsersService dan foydalanamiz
+    return this.authService.getUserFromToken(req.user);
   }
 
   @Post('admin/register')

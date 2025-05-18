@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
@@ -57,5 +58,14 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       user: result,
     };
+  }
+  async getUserFromToken(payload: any) {
+    // payload.sub token ichidagi user ID sini saqlaydi
+    const user = await this.usersService.findById(payload.userId);
+    if (!user) {
+      throw new UnauthorizedException('Foydalanuvchi topilmadi');
+    }
+    const { password, ...result } = user.toObject ? user.toObject() : user;
+    return result;
   }
 }
