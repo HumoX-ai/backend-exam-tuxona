@@ -10,7 +10,9 @@ import {
   HttpCode,
   HttpStatus,
   Request,
-  Query, // Query import qo‘shildi
+  Query,
+  UploadedFile,
+  UseInterceptors, // Query import qo‘shildi
 } from '@nestjs/common';
 import { VenuesService } from './venues.service';
 import { CreateVenueDto } from './dtos/create-venue.dto';
@@ -24,9 +26,11 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { VenueWithBookingsDto } from './dtos/venue-with-bookings.dto';
-
+import { FileInterceptor } from '@nestjs/platform-express';
 @ApiTags('Venues')
 @Controller('venues')
 export class VenuesController {
@@ -127,5 +131,38 @@ export class VenuesController {
   @ApiResponse({ status: 404, description: 'To‘yxona topilmadi' })
   async getCalendar(@Param('id') id: string, @Query('date') date: string) {
     return this.venuesService.getCalendar(id, date);
+  }
+  @Post(':id/upload-image')
+  // @UseGuards(AuthGuard('jwt'), RolesGuard)
+  // @Roles()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Upload image for a venue (imgbb orqali)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('image'))
+  async uploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      return { message: 'Fayl topilmadi' };
+    }
+    console.log('file.buffer length:', file.buffer?.length); // <-- Qo‘shing
+    const venue = await this.venuesService.addImageFromImgbb(id, file);
+    return {
+      message: 'Rasm muvaffaqiyatli yuklandi',
+      imageUrl: venue.images[venue.images.length - 1],
+      venue,
+    };
   }
 }

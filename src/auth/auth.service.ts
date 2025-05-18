@@ -46,7 +46,8 @@ export class AuthService {
       ...registerDto,
       role: registerDto.role || 'user',
     });
-    const { password, ...result } = user as any;
+    // Faqat kerakli maydonlarni ajratib olish
+    const { password, ...result } = user.toObject ? user.toObject() : user;
     const payload = {
       username: result.username,
       sub: result._id,

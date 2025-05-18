@@ -4,9 +4,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express'; // Bu qator qo'shildi
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule); // NestExpressApplication tipini ko'rsatdik
 
   // CORS configuration
   app.enableCors({
@@ -23,9 +24,9 @@ async function bootstrap() {
 
   // Swagger sozlamalari
   const config = new DocumentBuilder()
-    .setTitle('To‘yxona API')
+    .setTitle("To'yxona API")
     .setDescription(
-      'Toshkent shahridagi to‘yxonalarni onlayn bron qilish tizimi',
+      "Toshkent shahridagi to'yxonalarni onlayn bron qilish tizimi",
     )
     .setVersion('1.0')
     .addBearerAuth() // JWT autentifikatsiyasi uchun

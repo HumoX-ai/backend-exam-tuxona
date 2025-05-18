@@ -13,6 +13,8 @@ import { UpdateVenueDto } from './dtos/update-venue.dto';
 import { VenueWithBookingsDto } from './dtos/venue-with-bookings.dto';
 import { UsersService } from '../users/users.service';
 import { Booking, BookingDocument } from '../bookings/schemas/booking.schema';
+import axios from 'axios';
+import * as FormData from 'form-data';
 
 @Injectable()
 export class VenuesService {
@@ -146,5 +148,49 @@ export class VenuesService {
       .exec();
 
     return { isBooked: !!booking };
+  }
+
+  async uploadToImgbb(buffer: Buffer, apiKey: string): Promise<string> {
+    const formData = new FormData();
+    formData.append('image', buffer.toString('base64')); // Send base64 string as form field
+
+    try {
+      const res = await axios.post<{ data: { url: string } }>(
+        `https://api.imgbb.com/1/upload?key=${apiKey}`,
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(), // Sets Content-Type to multipart/form-data with boundary
+          },
+        },
+      );
+      return res.data.data.url;
+    } catch (error) {
+      console.error(
+        'ImgBB upload error:',
+        error.response?.data || error.message,
+      );
+      throw new BadRequestException('Failed to upload image to ImgBB');
+    }
+  }
+
+  async addImageFromImgbb(
+    venueId: string,
+    file: Express.Multer.File,
+  ): Promise<Venue> {
+    const venue = await this.venueModel.findById(venueId);
+    if (!venue) throw new NotFoundException('Venue not found');
+
+    const apiKey =
+      process.env.IMGBB_API_KEY || '16116008be0e3d2ddf6f9e1b9a10a799';
+    if (!apiKey) throw new BadRequestException('IMGBB API key not set');
+
+    if (!file || !file.buffer)
+      throw new BadRequestException('File not found or invalid format');
+
+    const imageUrl = await this.uploadToImgbb(file.buffer, apiKey);
+    venue.images.push(imageUrl);
+    await venue.save();
+    return venue;
   }
 }
