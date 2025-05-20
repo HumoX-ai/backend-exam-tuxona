@@ -15,6 +15,7 @@ import { UsersService } from '../users/users.service';
 import { Booking, BookingDocument } from '../bookings/schemas/booking.schema';
 import axios from 'axios';
 import * as FormData from 'form-data';
+import { FilterVenuesDto } from './dtos/filter-venues.dto';
 
 @Injectable()
 export class VenuesService {
@@ -38,12 +39,53 @@ export class VenuesService {
     return venue.save();
   }
 
-  async findAll(): Promise<VenueWithBookingsDto[]> {
-    const venues = await this.venueModel
-      .find({ status: 'approved' })
-      .populate('owner')
-      .lean()
-      .exec();
+  async findAll(
+    filters?: Partial<FilterVenuesDto>,
+  ): Promise<VenueWithBookingsDto[]> {
+    const query: Record<string, any> = { status: 'approved' };
+
+    // Nomi bo‘yicha qidiruv
+    if (filters?.query) {
+      query.$or = [{ name: { $regex: filters.query, $options: 'i' } }];
+    }
+
+    // Sig‘im bo‘yicha
+    if (filters?.capacity) {
+      query.capacity = { $gte: Number(filters.capacity) };
+    }
+
+    // Tuman bo‘yicha
+    if (filters?.district) {
+      query.district = filters.district;
+    }
+
+    // Narx oralig‘i
+    if (filters?.minPricePerSeat || filters?.maxPricePerSeat) {
+      query.pricePerSeat = {};
+      if (filters.minPricePerSeat)
+        query.pricePerSeat.$gte = Number(filters.minPricePerSeat);
+      if (filters.maxPricePerSeat)
+        query.pricePerSeat.$lte = Number(filters.maxPricePerSeat);
+    }
+
+    // Rasm mavjudligini tekshirish
+    if (filters?.hasImages === 'true') {
+      query.images = { $exists: true, $ne: [] };
+    }
+
+    // So‘rov
+    let mongooseQuery = this.venueModel.find(query).populate('owner').lean();
+
+    // Saralash
+    if (filters?.sortBy) {
+      const sortDirection = filters.sortOrder === 'desc' ? -1 : 1;
+      mongooseQuery = mongooseQuery.sort({ [filters.sortBy]: sortDirection });
+    }
+
+    const venues = await mongooseQuery.exec();
+
+    const fromDate = filters?.fromDate ? new Date(filters.fromDate) : null;
+    const toDate = filters?.toDate ? new Date(filters.toDate) : null;
 
     return Promise.all(
       venues.map(async (venue) => {
@@ -59,13 +101,28 @@ export class VenuesService {
           (booking) => new Date(booking.date).toISOString().split('T')[0],
         );
 
+        // Sanalar bo‘yicha filtering
+        let isDateAvailable = true;
+        if (fromDate && toDate) {
+          const targetDates: string[] = [];
+          const current = new Date(fromDate);
+          while (current <= toDate) {
+            targetDates.push(current.toISOString().split('T')[0]);
+            current.setDate(current.getDate() + 1);
+          }
+          isDateAvailable = !targetDates.some((d) => bookedDates.includes(d));
+        }
+
         return {
           ...venue,
           _id: new Types.ObjectId(venue._id.toString()),
           isBooked: bookedDates.length > 0,
           bookedDates,
+          isAvailable: isDateAvailable,
         };
       }),
+    ).then((results) =>
+      results.filter((venue) => !fromDate || venue.isAvailable),
     );
   }
 

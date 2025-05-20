@@ -31,6 +31,7 @@ import {
 } from '@nestjs/swagger';
 import { VenueWithBookingsDto } from './dtos/venue-with-bookings.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { FilterVenuesDto } from './dtos/filter-venues.dto';
 @ApiTags('Venues')
 @Controller('venues')
 export class VenuesController {
@@ -58,8 +59,8 @@ export class VenuesController {
     description: 'To‘yxonalarni ro‘yxati, bandlik holati va sanalari bilan',
     type: [VenueWithBookingsDto],
   })
-  async findAll() {
-    return this.venuesService.findAll();
+  async findAll(@Query() filterDto: FilterVenuesDto) {
+    return this.venuesService.findAll(filterDto);
   }
 
   @Get(':id')
