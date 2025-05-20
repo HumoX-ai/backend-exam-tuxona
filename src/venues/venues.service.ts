@@ -135,12 +135,37 @@ export class VenuesService {
     );
   }
 
-  async findById(id: string): Promise<Venue> {
-    const venue = await this.venueModel.findById(id).populate('owner').exec();
-    if (!venue) {
+  async findById(id: string): Promise<VenueWithBookingsDto> {
+    // Qaytarish turi VenueWithBookingsDto ga o'zgartirildi
+    const venueDoc = await this.venueModel
+      .findById(id)
+      .populate('owner')
+      .exec();
+    if (!venueDoc) {
       throw new NotFoundException('Venue not found');
     }
-    return venue;
+
+    const bookings = await this.bookingModel
+      .find({
+        venue: (venueDoc._id as Types.ObjectId).toString(), // <-- ObjectId emas, string bo'lishi kerak
+        status: { $in: ['pending', 'confirmed'] },
+      })
+      .lean()
+      .exec();
+
+    const bookedDates = bookings.map(
+      (booking) => new Date(booking.date).toISOString().split('T')[0],
+    );
+
+    const venueObject = venueDoc.toObject(); // Mongoose dokumentini oddiy obyektga o'tkazish
+
+    return {
+      ...venueObject,
+      _id: new Types.ObjectId(String(venueObject._id)), // _id ni ObjectId sifatida saqlash (findAll bilan bir xil)
+      // owner maydoni venueObject ichida populated bo'lgan holda keladi
+      isBooked: bookedDates.length > 0,
+      bookedDates,
+    };
   }
 
   async update(
