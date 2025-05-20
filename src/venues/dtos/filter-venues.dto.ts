@@ -14,6 +14,11 @@ export class FilterVenuesDto {
   query?: string;
 
   @IsOptional()
+  @IsNumberString()
+  @ApiPropertyOptional({ description: 'Soni (chegaralangan)' })
+  limit?: number;
+
+  @IsOptional()
   @IsString()
   @ApiPropertyOptional({ description: 'Saralash bo‘yicha maydon' })
   sortBy?: 'name' | 'capacity' | 'pricePerSeat';

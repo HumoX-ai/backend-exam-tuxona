@@ -76,6 +76,15 @@ export class VenuesService {
     // So‘rov
     let mongooseQuery = this.venueModel.find(query).populate('owner').lean();
 
+    if (filters?.limit) {
+      const limit = Number(filters.limit);
+      if (limit > 0) {
+        mongooseQuery = mongooseQuery.limit(limit);
+      } else {
+        throw new BadRequestException('Limit must be a positive number');
+      }
+    }
+
     // Saralash
     if (filters?.sortBy) {
       const sortDirection = filters.sortOrder === 'desc' ? -1 : 1;
