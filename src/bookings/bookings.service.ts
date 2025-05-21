@@ -6,12 +6,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose'; // Added Types
 import { Booking, BookingDocument } from './schemas/booking.schema';
 import { CreateBookingDto } from './dtos/create-booking.dto';
 import { UpdateBookingDto } from './dtos/update-booking.dto';
 import { VenuesService } from '../venues/venues.service';
 import { UsersService } from '../users/users.service';
+import { VenueWithBookingsDto } from '../venues/dtos/venue-with-bookings.dto'; // Added
 
 @Injectable()
 export class BookingsService {
@@ -131,14 +132,71 @@ export class BookingsService {
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const booking = await this.findById(id);
+    const booking = await this.findById(id); // booking.venue and booking.user are populated
     const user = await this.usersService.findById(userId);
 
-    const venue = await this.venuesService.findById(booking.venue.toString());
+    // Correctly get the venue ID string from the populated venue object
+    // booking.venue is populated, so it's a VenueDocument. We need its _id.
+    let venueId: string;
+    if (
+      booking.venue &&
+      typeof booking.venue === 'object' &&
+      '_id' in booking.venue &&
+      booking.venue._id
+    ) {
+      venueId = (
+        booking.venue as { _id: Types.ObjectId | string }
+      )._id.toString();
+    } else if (typeof booking.venue === 'string') {
+      venueId = booking.venue;
+    } else {
+      throw new Error('Venue ID could not be determined');
+    }
+    // venuesService.findById returns VenueWithBookingsDto, which includes the owner.
+    const venue: VenueWithBookingsDto =
+      await this.venuesService.findById(venueId);
+
+    // Get the string ID for the booking user
+    // booking.user is populated, so it's a UserDocument.
+    let bookingUserId: string;
+    if (
+      booking.user &&
+      typeof booking.user === 'object' &&
+      '_id' in booking.user &&
+      booking.user._id
+    ) {
+      bookingUserId = (
+        booking.user as { _id: Types.ObjectId | string }
+      )._id.toString();
+    } else if (typeof booking.user === 'string') {
+      bookingUserId = booking.user;
+    } else {
+      throw new Error('Booking user ID could not be determined');
+    }
+
+    // Get the string ID for the venue owner
+    // venue.owner can be a populated object or just an ID string depending on how it was populated.
+    // In VenueWithBookingsDto, owner is populated (UserDocument or similar structure with _id).
+    let venueOwnerIdString: string;
+    if (typeof venue.owner === 'string') {
+      venueOwnerIdString = venue.owner;
+    } else if (
+      venue.owner &&
+      typeof venue.owner === 'object' &&
+      '_id' in venue.owner
+    ) {
+      venueOwnerIdString = (
+        venue.owner as { _id: Types.ObjectId | string }
+      )._id.toString();
+    } else {
+      // Fallback or error handling if owner structure is unexpected
+      throw new Error('Venue owner ID could not be determined');
+    }
+
     if (
       user.role !== 'admin' &&
-      booking.user.toString() !== userId &&
-      venue.owner.toString() !== userId
+      bookingUserId !== userId &&
+      venueOwnerIdString !== userId
     ) {
       throw new ForbiddenException(
         'Only admins, booking owner, or venue owner can delete this booking',

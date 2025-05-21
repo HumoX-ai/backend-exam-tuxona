@@ -156,7 +156,7 @@ export class VenuesService {
 
     const bookings = await this.bookingModel
       .find({
-        venue: (venueDoc._id as Types.ObjectId).toString(), // venueDoc._id ni stringga o'tkazib yuborish
+        venue: (venueDoc._id as Types.ObjectId).toString(),
         status: { $in: ['pending', 'confirmed'] },
       })
       .populate('user', '_id') // Populate user and select only _id
@@ -164,11 +164,12 @@ export class VenuesService {
       .exec();
 
     const bookedDatesData = bookings.map((booking) => {
-      // Ensure booking.user is populated and has _id
-      const userObject = booking.user as { _id: Types.ObjectId };
+      const bookingObject = booking as any; // Treat as any to access _id and user._id safely with lean()
+      const userId = bookingObject.user?._id?.toString() || '';
       return {
-        date: new Date(booking.date).toISOString().split('T')[0],
-        userId: userObject?._id?.toString(), // Get user ID as string
+        _id: bookingObject._id.toString(), // Booking's own _id
+        date: new Date(bookingObject.date).toISOString().split('T')[0],
+        userId: userId,
       };
     });
 
