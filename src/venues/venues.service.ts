@@ -103,12 +103,19 @@ export class VenuesService {
             venue: venue._id.toString(),
             status: { $in: ['pending', 'confirmed'] },
           })
+          .populate('user', '_id')
           .lean()
           .exec();
 
-        const bookedDates = bookings.map(
-          (booking) => new Date(booking.date).toISOString().split('T')[0],
-        );
+        const bookedDates = bookings.map((booking) => ({
+          date: new Date(booking.date).toISOString().split('T')[0],
+          userId:
+            booking.user && typeof booking.user === 'object'
+              ? (booking.user as { _id: Types.ObjectId })._id.toString()
+              : booking.user
+                ? (booking.user as Types.ObjectId).toString()
+                : '',
+        }));
 
         // Sanalar bo‘yicha filtering
         let isDateAvailable = true;
@@ -119,7 +126,9 @@ export class VenuesService {
             targetDates.push(current.toISOString().split('T')[0]);
             current.setDate(current.getDate() + 1);
           }
-          isDateAvailable = !targetDates.some((d) => bookedDates.includes(d));
+          isDateAvailable = !targetDates.some((d) =>
+            bookedDates.some((b) => b.date === d),
+          );
         }
 
         return {
@@ -147,15 +156,21 @@ export class VenuesService {
 
     const bookings = await this.bookingModel
       .find({
-        venue: (venueDoc._id as Types.ObjectId).toString(), // <-- ObjectId emas, string bo'lishi kerak
+        venue: (venueDoc._id as Types.ObjectId).toString(), // venueDoc._id ni stringga o'tkazib yuborish
         status: { $in: ['pending', 'confirmed'] },
       })
+      .populate('user', '_id') // Populate user and select only _id
       .lean()
       .exec();
 
-    const bookedDates = bookings.map(
-      (booking) => new Date(booking.date).toISOString().split('T')[0],
-    );
+    const bookedDatesData = bookings.map((booking) => {
+      // Ensure booking.user is populated and has _id
+      const userObject = booking.user as { _id: Types.ObjectId };
+      return {
+        date: new Date(booking.date).toISOString().split('T')[0],
+        userId: userObject?._id?.toString(), // Get user ID as string
+      };
+    });
 
     const venueObject = venueDoc.toObject(); // Mongoose dokumentini oddiy obyektga o'tkazish
 
@@ -163,8 +178,8 @@ export class VenuesService {
       ...venueObject,
       _id: new Types.ObjectId(String(venueObject._id)), // _id ni ObjectId sifatida saqlash (findAll bilan bir xil)
       // owner maydoni venueObject ichida populated bo'lgan holda keladi
-      isBooked: bookedDates.length > 0,
-      bookedDates,
+      isBooked: bookedDatesData.length > 0,
+      bookedDates: bookedDatesData, // Updated to bookedDatesData
     };
   }
 

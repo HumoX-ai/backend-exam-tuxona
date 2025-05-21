@@ -1,6 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 
+export interface BookedDateInfo {
+  date: string;
+  userId: string;
+}
+
 export class VenueWithBookingsDto {
   @ApiProperty({
     description: 'To‘yxona IDsi',
@@ -43,7 +48,10 @@ export class VenueWithBookingsDto {
 
   @ApiProperty({
     description: 'Bron qilingan sanalar (YYYY-MM-DD formatida)',
-    example: ['2025-06-15', '2025-06-20'],
+    example: [{ date: '2025-06-15', userId: '60c72b2f9b1e8c001c8b4567' }],
   })
-  bookedDates: string[];
+  bookedDates: BookedDateInfo[];
+
+  @ApiProperty({ description: 'Mavjudligi', example: true })
+  isAvailable?: boolean;
 }
