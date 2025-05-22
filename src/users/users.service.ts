@@ -40,8 +40,9 @@ export class UsersService {
     return user;
   }
 
-  async findAll(): Promise<User[]> {
-    return this.userModel.find().exec();
+  async findAll(role?: string): Promise<User[]> {
+    const query = role ? { role } : {};
+    return this.userModel.find(query).exec();
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {

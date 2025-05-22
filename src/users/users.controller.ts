@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   Patch,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -21,6 +22,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 @ApiTags('Users')
@@ -47,14 +49,15 @@ export class UsersController {
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Barcha foydalanuvchilarni ko‘rish (admin uchun)' })
+  @ApiQuery({ name: 'role', required: false, enum: ['admin', 'owner', 'user'] })
   @ApiResponse({
     status: 200,
     description: 'Foydalanuvchilar ro‘yxati',
     type: [CreateUserDto],
   })
   @ApiResponse({ status: 403, description: 'Faqat adminlar uchun' })
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query('role') role?: string) {
+    return this.usersService.findAll(role);
   }
 
   @Get(':id')
