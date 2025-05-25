@@ -86,4 +86,13 @@ export class UpdateVenueDto {
   @IsOptional()
   @IsEnum(['pending', 'approved'])
   status?: string;
+
+  @ApiProperty({
+    description: 'To‘yxona egasi (foydalanuvchi ID)',
+    example: '60c72b2f9b1e8c001c8b4567',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  owner?: string;
 }
