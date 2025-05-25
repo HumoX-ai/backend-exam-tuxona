@@ -11,7 +11,6 @@ import {
   HttpStatus,
   Request,
   Query,
-  UploadedFile,
   UseInterceptors, // Query import qo‘shildi
 } from '@nestjs/common';
 import { VenuesService } from './venues.service';
@@ -30,7 +29,8 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { VenueWithBookingsDto } from './dtos/venue-with-bookings.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { UploadedFiles } from '@nestjs/common';
 import { FilterVenuesDto } from './dtos/filter-venues.dto';
 @ApiTags('Venues')
 @Controller('venues')
@@ -134,8 +134,6 @@ export class VenuesController {
     return this.venuesService.getCalendar(id, date);
   }
   @Post(':id/upload-image')
-  // @UseGuards(AuthGuard('jwt'), RolesGuard)
-  // @Roles()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Upload image for a venue (imgbb orqali)' })
   @ApiConsumes('multipart/form-data')
@@ -143,26 +141,27 @@ export class VenuesController {
     schema: {
       type: 'object',
       properties: {
-        image: {
-          type: 'string',
-          format: 'binary',
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
         },
       },
+      required: ['images'],
     },
   })
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FilesInterceptor('images', 4))
   async uploadImage(
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
   ) {
-    if (!file) {
+    if (!files || files.length === 0) {
       return { message: 'Fayl topilmadi' };
     }
-    console.log('file.buffer length:', file.buffer?.length); // <-- Qo‘shing
-    const venue = await this.venuesService.addImageFromImgbb(id, file);
+    const venue = await this.venuesService.addImagesFromImgbb(id, files);
+    const newUrls = venue.images.slice(-files.length);
     return {
-      message: 'Rasm muvaffaqiyatli yuklandi',
-      imageUrl: venue.images[venue.images.length - 1],
+      message: 'Rasmlar muvaffaqiyatli yuklandi',
+      imageUrls: newUrls,
       venue,
     };
   }

@@ -168,7 +168,7 @@ export class VenuesService {
       const userId = bookingObject.user?._id?.toString() || '';
       return {
         _id: bookingObject._id.toString(), // Booking's own _id
-        date: new Date(bookingObject.date).toISOString().split('T')[0],
+        date: new Date(String(bookingObject.date)).toISOString().split('T')[0],
         userId: userId,
       };
     });
@@ -180,7 +180,7 @@ export class VenuesService {
       _id: new Types.ObjectId(String(venueObject._id)), // _id ni ObjectId sifatida saqlash (findAll bilan bir xil)
       // owner maydoni venueObject ichida populated bo'lgan holda keladi
       isBooked: bookedDatesData.length > 0,
-      bookedDates: bookedDatesData, // Updated to bookedDatesData
+      bookedDates: bookedDatesData,
     };
   }
 
@@ -297,6 +297,25 @@ export class VenuesService {
 
     const imageUrl = await this.uploadToImgbb(file.buffer, apiKey);
     venue.images.push(imageUrl);
+    await venue.save();
+    return venue;
+  }
+
+  // Upload multiple images to ImgBB and save to venue
+  async addImagesFromImgbb(
+    venueId: string,
+    files: Express.Multer.File[],
+  ): Promise<Venue> {
+    const venue = await this.venueModel.findById(venueId);
+    if (!venue) throw new NotFoundException('Venue not found');
+    const apiKey =
+      process.env.IMGBB_API_KEY || '16116008be0e3d2ddf6f9e1b9a10a799';
+    if (!apiKey) throw new BadRequestException('IMGBB API key not set');
+    for (const file of files) {
+      if (!file?.buffer) throw new BadRequestException('File not found');
+      const url = await this.uploadToImgbb(file.buffer, apiKey);
+      venue.images.push(url);
+    }
     await venue.save();
     return venue;
   }

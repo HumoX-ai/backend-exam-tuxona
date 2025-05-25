@@ -81,10 +81,25 @@ export class BookingsService {
     updateBookingDto: UpdateBookingDto,
     userId: string,
   ): Promise<Booking> {
-    const booking = await this.findById(id);
+    // Load raw booking without population to use correct ObjectId fields
+    const bookingDoc = await this.bookingModel.findById(id).exec();
+    if (!bookingDoc) {
+      throw new NotFoundException('Booking not found');
+    }
+    const booking = bookingDoc;
     const user = await this.usersService.findById(userId);
 
-    const venue = await this.venuesService.findById(booking.venue.toString());
+    // Determine venue ID from raw ObjectId
+    let venueId: string;
+    if (typeof booking.venue === 'object' && '_id' in booking.venue) {
+      venueId = (
+        booking.venue as { _id: Types.ObjectId | string }
+      )._id.toString();
+    } else {
+      venueId = booking.venue.toString();
+    }
+    const venue = await this.venuesService.findById(venueId);
+
     if (
       user.role !== 'admin' &&
       booking.user.toString() !== userId &&
@@ -101,7 +116,7 @@ export class BookingsService {
 
     if (updateBookingDto.date) {
       const existingBooking = await this.bookingModel.findOne({
-        venue: booking.venue,
+        venue: new Types.ObjectId(venueId),
         date: new Date(updateBookingDto.date),
         status: { $ne: 'cancelled' },
         _id: { $ne: id },
