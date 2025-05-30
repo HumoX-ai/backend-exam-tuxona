@@ -7,7 +7,7 @@ commands:
 - echo Installing dependencies...
 - npm install
 - aws s3 cp s3://my-nest-key-bucket/my-key-humox.pem /tmp/my-key-humox.pem
-- chmod 400 /tmp/my-key.pem
+- chmod 400 /tmp/my-key-humox.pem
 build:
 commands:
 - echo Building the NestJS app...
