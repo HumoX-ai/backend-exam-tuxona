@@ -1,24 +1,30 @@
 version: 0.2
+
 phases:
-install:
-runtime-versions:
-nodejs: 20
-commands:
-- echo Installing dependencies...
-- npm install
-- aws s3 cp s3://my-nest-key-bucket/my-key-humox.pem /tmp/my-key-humox.pem
-- chmod 400 /tmp/my-key-humox.pem
-build:
-commands:
-- echo Building the NestJS app...
-- npm run build
-post_build:
-commands:
-- echo Copying files to EC2...
-- scp -i /tmp/my-key-humox.pem -r ./dist ec2-user@13.51.156.7:/home/ec2-user/backend-exam-tuxona/
-- scp -i /tmp/my-key-humox.pem -r ./package.json ec2-user@13.51.156.7:/home/ec2-user/backend-exam-tuxona/
-- scp -i /tmp/my-key-humox.pem -r ./ecosystem.config.js ec2-user@13.51.156.7:/home/ec2-user/backend-exam-tuxona/
-- ssh -i /tmp/my-key-humox.pem ec2-user@13.51.156.7 "cd /home/ec2-user/backend-exam-tuxona && npm install && pm2 restart ecosystem.config.js --name nest-app || pm2 start ecosystem.config.js --name nest-app"
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo Installing dependencies...
+      - npm install
+      - echo Downloading PEM file from S3...
+      - aws s3 cp s3://my-nest-key-bucket/my-key-humox.pem /tmp/my-key-humox.pem
+      - chmod 400 /tmp/my-key-humox.pem
+
+  build:
+    commands:
+      - echo Building the NestJS app...
+      - npm run build
+
+  post_build:
+    commands:
+      - echo Copying files to EC2...
+      - scp -i /tmp/my-key-humox.pem -o StrictHostKeyChecking=no -r ./dist ec2-user@13.51.156.7:/home/ec2-user/backend-exam-tuxona/
+      - scp -i /tmp/my-key-humox.pem -o StrictHostKeyChecking=no ./package.json ec2-user@13.51.156.7:/home/ec2-user/backend-exam-tuxona/
+      - scp -i /tmp/my-key-humox.pem -o StrictHostKeyChecking=no ./ecosystem.config.js ec2-user@13.51.156.7:/home/ec2-user/backend-exam-tuxona/
+      - echo Connecting via SSH to install deps and restart app...
+      - ssh -i /tmp/my-key-humox.pem -o StrictHostKeyChecking=no ec2-user@13.51.156.7 "cd /home/ec2-user/backend-exam-tuxona && npm install && pm2 restart ecosystem.config.js --name nest-app || pm2 start ecosystem.config.js --name nest-app"
+
 artifacts:
-files:
-- '**/*'
+  files:
+    - '**/*'
